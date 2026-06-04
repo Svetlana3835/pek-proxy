@@ -21,6 +21,7 @@ const server = http.createServer((req, res) => {
       try {
         const { authorization, payload } = JSON.parse(body);
         const postData = JSON.stringify(payload);
+        console.log('Sending to PEK:', postData);
         const options = {
           hostname: 'kabinet.pecom.ru',
           path: '/api/v1/branches/calculateprice/',
@@ -35,17 +36,24 @@ const server = http.createServer((req, res) => {
           let data = '';
           proxyRes.on('data', chunk => data += chunk);
           proxyRes.on('end', () => {
+            console.log('PEK response status:', proxyRes.statusCode);
+            console.log('PEK response body:', data);
+            if (!data || data.trim() === '') {
+              data = JSON.stringify({ error: 'Empty response from PEK', status: proxyRes.statusCode });
+            }
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(data);
           });
         });
         proxyReq.on('error', e => {
+          console.log('Proxy error:', e.message);
           res.writeHead(500);
           res.end(JSON.stringify({ error: e.message }));
         });
         proxyReq.write(postData);
         proxyReq.end();
       } catch (e) {
+        console.log('Parse error:', e.message);
         res.writeHead(400);
         res.end(JSON.stringify({ error: e.message }));
       }
